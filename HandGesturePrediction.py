@@ -1,4 +1,3 @@
-import numpy as np
 import cv2, time
 from firebase.PyrebaseConfig import *
 import GmailConfig as gm
@@ -21,15 +20,15 @@ counter = 0
 # This parameter controls number of image samples to be taken PER gesture
 numOfSamples = 301
 gestname = ""
-path = ""
+path = "./data_set/"
 mod = 0
 
 # =====================================
 im_save_state = False
 check_state_prediction = False
-visualize = False
+check_training_mode = False
 
-# Has any weapon or violence' reaction
+# Has any weapon or violence' reaction check state
 has_violence_weapon = 0
 has_money = 0
 # Prediction Threshold be able to filter output.
@@ -44,8 +43,11 @@ def saveROIImg(img):
         im_save_state = False
         gestname = ''
         counter = 0
+        chk_next_class = input("Do you want save the next class(y/n): ")
+        if chk_next_class == 'y':
+            im_save_state = True
+            gestname = input("Type name for next class: ")
         return
-
     counter = counter + 1
     name = gestname + str(counter)
     print("Saving img:", name)
@@ -55,7 +57,7 @@ def saveROIImg(img):
 '''================= CROP AND CONVERT TO GRAYSCALE ==================='''
 '''==================================================================='''
 def binaryMask(frame, x0, y0, width, height, pyrebase):
-    global check_state_prediction, visualize, mod, lastgesture, im_save_state, has_violence_weapon, has_money
+    global check_state_prediction, check_training_mode, mod, lastgesture, im_save_state, has_violence_weapon, has_money
 
     cv2.rectangle(frame, (x0, y0), (x0 + width, y0 + height), (0, 0, 0), 2)
     roi = frame[y0:y0 + height, x0:x0 + width]
@@ -89,27 +91,26 @@ def binaryMask(frame, x0, y0, width, height, pyrebase):
                 has_money = 0
                 gm.start_send_mail("HASMONEY")
 
-
-
-
     return res
+
 
 '''========================================================================================'''
 '''====================================== MAIN ============================================'''
 '''========================================================================================'''
 def Main():
-    global check_state_prediction, visualize, mod, binaryMode, x0, y0, width, height, im_save_state, gestname, path
+    global check_state_prediction, check_training_mode, mod, binaryMode, \
+           x0, y0, width, height, im_save_state, gestname, path
 
     #Init Pyrebase
     pyrebase = PyrebaseConfig()
 
+    #Params for put text on the screen
     font = cv2.FONT_HERSHEY_DUPLEX
     size = 0.5
     fx = 400
     fy = 50
     fh = 18
-    mod = my_cnn.load_cnn(0)
-    # Call CNN model loading callback
+
 
     ## Grab camera input
     cap = cv2.VideoCapture(1)
@@ -128,9 +129,10 @@ def Main():
             binaryMask(frame, x0, y0, width, height, pyrebase)
         cv2.line(frame, (370,0), (370,480), (0,0,0), 2)
         cv2.putText(frame, 'Opts-Press key from keyboard', (fx-20, fy), font, 0.5, (0, 0, 0), 1, 1)
-        cv2.putText(frame, 'p - Prediction', (fx, fy + fh), font, size, (0, 50, 0), 1, 1)
-        cv2.putText(frame, 'c- Image Collection', (fx, fy+ 2*fh), font, size, (0,50,0),1, 1)
-        cv2.putText(frame, 'esc - Quit', (fx, fy +  3*fh), font, size, (0, 50, 0), 1, 1)
+        cv2.putText(frame, 't - Training', (fx, fy + fh), font, size, (0, 50, 0), 1, 1)
+        cv2.putText(frame, 'c - Image Collection', (fx, fy+ 2*fh), font, size, (0,50,0),1, 1)
+        cv2.putText(frame, 'p - Prediction',(fx, fy + 3*fh), font, size, (0, 50, 0), 1, 1)
+        cv2.putText(frame, 'esc - Quit', (fx, fy +  4*fh), font, size, (0, 50, 0), 1, 1)
         cv2.putText(frame, '[Counter Area]',(fx+50, fy+ 21*fh), font, size, (0,0,0),2,1)
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -139,13 +141,22 @@ def Main():
         # Keyboard inputs
         key = cv2.waitKey(10) & 0xff
 
-
-
-
         ## Use g key to start gesture predictions via CNN
         if key == ord('p'):
-            check_state_prediction = not check_state_prediction
             print("Prediction Mode - {}".format(check_state_prediction))
+            mod = my_cnn.load_cnn(0)
+            check_state_prediction = not check_state_prediction
+
+        ## Use c key to start collect image and save to data_set
+        if key == ord('c'):
+            gestname = input("Type name of the classes (Ex: PUNCH, KNIFE....): ")
+            im_save_state = not im_save_state
+
+        ## Use t key to start training mode
+        if key == ord('t'):
+            mod = my_cnn.load_cnn(-1)
+            my_cnn.trainModel(mod)
+            check_training_mode = not check_training_mode
 
         ## Use Esc key to close the program
         elif key == 27:

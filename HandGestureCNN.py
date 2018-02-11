@@ -10,7 +10,6 @@ import os
 from PIL import Image
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
-import json
 from matplotlib import pyplot as plt
 
 
@@ -21,7 +20,7 @@ from matplotlib import pyplot as plt
 '''
 im_predict_classes = 4
 # Epochs
-im_epoches = 15  # 25
+im_epoches = 15 
 # Convolutional filters will be used
 im_filters = 32
 # Max pooling
@@ -46,8 +45,10 @@ weight_file_name = ["hand_crime_prevention.hdf5", "hi_punch_weights.hdf5"]
 # Label Output
 output = ["FRIENDLINESS", "HASMONEY", "PUNCH", "KNIFE"]
 
-# %%
-def modlistdir(path):
+
+'''======================== Get Image Name List ====================='''
+'''=================================================================='''
+def get_im_name_list(path):
     listing = os.listdir(path)
     retlist = []
     for name in listing:
@@ -58,7 +59,8 @@ def modlistdir(path):
     return retlist
 
 
-# Load CNN model
+'''=========================== Load CNN MODEL ======================='''
+'''=================================================================='''
 def load_cnn(wf_index):
     global get_output
     model = Sequential()
@@ -80,7 +82,6 @@ def load_cnn(wf_index):
     model.add(Dropout(0.5))
     model.add(Dense(im_predict_classes))
     model.add(Activation('softmax'))
-    # sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
 
     # Model summary
@@ -100,7 +101,8 @@ def load_cnn(wf_index):
 
     return model
 
-
+'''======= Predicting output does work based on Input Image ========'''
+'''================================================================='''
 # This function does the guessing work based on input images
 def predict(model, img):
     global output, get_output
@@ -118,10 +120,6 @@ def predict(model, img):
 
     # reshape for NN
     rimage = image.reshape(1, im_channels, im_row, im_col)
-
-    # Now feed it to the NN, to fetch the predictions
-    # index = model.predict_classes(rimage)
-    # prob_array = model.predict_proba(rimage)
 
     prob_array = get_output([rimage, 0])[0]
 
@@ -141,52 +139,45 @@ def predict(model, img):
 
     if prob > 70.0:
         print("Prediction: " + guess + "  Probability: ", prob)
-
         return guess
 
     else:
         return "SOMETHING"
 
 
-# %%
+'''=========================== SAVE ROI IMAGE ======================='''
+'''=================================================================='''
 def initializers():
-    imlist = modlistdir(data_set_path)
+    # Get Dataset 's image name list
+    imlist = get_im_name_list(data_set_path)
 
-    image1 = np.array(Image.open(data_set_path + '/' + imlist[0]))  # open one image to get size
-    # plt.imshow(im1)
 
-    m, n = image1.shape[0:2]  # get the size of the images
-    total_images = len(imlist)  # get the 'total' number of images
+    image1 = np.array(Image.open(data_set_path + '/' + imlist[0]))
 
-    # create matrix to store all flattened images
+    # Get the Img 's size
+    t = image1.shape[0:2]
+
+    # Get total of Image is in Data_Set
+    total_images = len(imlist)
+
+    # Create Matrix to store all flattened images
     immatrix = np.array([np.array(Image.open(data_set_path + '/' + images).convert('L')).flatten()
                          for images in imlist], dtype='f')
 
     print(immatrix.shape)
 
-    input("Press any key")
-
-    #########################################################
-    ## Label the set of images per respective gesture type.
-    ##
+    # Label the set of images per respective gesture type.
     label = np.ones((total_images,), dtype=int)
 
     samples_per_class = total_images / im_predict_classes
-    print("samples_per_class - ", samples_per_class)
+    print("Sample per class: ", samples_per_class)
+    print(" label[0:301]=0 | label[301:602]=1 | label[602:903]=2 | label[903:1204]=3 with 0,1,2,3 is label")
     s = 0
     r = samples_per_class
     for classIndex in range(im_predict_classes):
         label[s:r] = classIndex
         s = r
         r = s + samples_per_class
-
-    '''
-    # eg: For 301 img samples/gesture for 4 gesture types
-    label[0:301]=0
-    label[301:602]=1
-    label[602:903]=2
-    label[903:]=3
-    '''
 
     data, Label = shuffle(immatrix, label, random_state=2)
     train_data = [data, Label]
@@ -212,7 +203,8 @@ def initializers():
     Y_test = np_utils.to_categorical(y_test, im_predict_classes)
     return X_train, X_test, Y_train, Y_test
 
-
+'''=========================== Training Model ======================='''
+'''=================================================================='''
 def trainModel(model):
     # Split X and y into training and testing sets
     X_train, X_test, Y_train, Y_test = initializers()
@@ -223,22 +215,13 @@ def trainModel(model):
 
     visualizeHis(hist)
 
-    ans = input("Do you want to save the trained weights - y/n ?")
-    if ans == 'y':
-        filename = input("Enter file name - ")
-        fname = "./" + str(filename) + ".hdf5"
-        model.save_weights(fname, overwrite=True)
-    else:
-        model.save_weights("newWeight.hdf5", overwrite=True)
+    #Save Weight File
+    model.save_weights("newWeight.hdf5", overwrite=True)
+    print("Training is finished!")
 
-    # Save model as well
-    # model.save("newModel.hdf5")
-
-
-# %%
-
+'''=========== Display Visualizing Losses And Accurary =============='''
+'''=================================================================='''
 def visualizeHis(hist):
-    # visualizing losses and accuracy
 
     train_loss = hist.history['loss']
     val_loss = hist.history['val_loss']
@@ -254,8 +237,6 @@ def visualizeHis(hist):
     plt.title('train_loss vs val_loss')
     plt.grid(True)
     plt.legend(['train', 'val'])
-    # print plt.style.available # use bmh, classic,ggplot for big pictures
-    # plt.style.use(['classic'])
 
     plt.figure(2, figsize=(7, 5))
     plt.plot(xc, train_acc)
@@ -269,79 +250,5 @@ def visualizeHis(hist):
     plt.show()
 
 
-# %%
-def visualizeLayers(model, img, layerIndex):
-    imlist = modlistdir('./imgs')
-    if img <= len(imlist):
-
-        image = np.array(Image.open('./imgs/' + imlist[img - 1]).convert('L')).flatten()
-
-        ## Predict
-        predict(model, image)
-
-        # reshape it
-        image = image.reshape(im_channels, im_row, im_col)
-
-        # float32
-        image = image.astype('float32')
-
-        # normalize it
-        image = image / 255
-
-        # reshape for NN
-        input_image = image.reshape(1, im_channels, im_row, im_col)
-    else:
-        X_train, X_test, Y_train, Y_test = initializers()
-
-        # the input image
-        input_image = X_test[:img + 1]
-
-    # visualizing intermediate layers
-    # output_layer = model.layers[layerIndex].output
-    # output_fn = theano.function([model.layers[0].input], output_layer)
-    # output_image = output_fn(input_image)
-
-    if layerIndex >= 1:
-        visualizeLayer(model, img, input_image, layerIndex)
-    else:
-        tlayers = len(model.layers[:])
-        print("Total layers - {}".format(tlayers))
-        for i in range(1, tlayers):
-            visualizeLayer(model, img, input_image, i)
-
-
-# %%
-def visualizeLayer(model, img, input_image, layerIndex):
-    layer = model.layers[layerIndex]
-
-    get_activations = K.function([model.layers[0].input, K.learning_phase()], [layer.output, ])
-    activations = get_activations([input_image, 0])[0]
-    output_image = activations
-
-    ## If 4 dimensional then take the last dimension value as it would be no of filters
-    if output_image.ndim == 4:
-        # Rearrange dimension so we can plot the result
-        o1 = np.rollaxis(output_image, 3, 1)
-        output_image = np.rollaxis(o1, 3, 1)
-
-        print("Dumping filter data of layer{} - {}".format(layerIndex, layer.__class__.__name__))
-        filters = len(output_image[0, 0, 0, :])
-
-        fig = plt.figure(figsize=(8, 8))
-        # This loop will plot the 32 filter data for the input image
-        for i in range(filters):
-            ax = fig.add_subplot(6, 6, i + 1)
-            # ax.imshow(output_image[img,:,:,i],interpolation='none' ) #to see the first filter
-            ax.imshow(output_image[0, :, :, i], 'gray')
-            # ax.set_title("Feature map of layer#{} \ncalled '{}' \nof type {} ".format(layerIndex,
-            #                layer.name,layer.__class__.__name__))
-            plt.xticks(np.array([]))
-            plt.yticks(np.array([]))
-        plt.tight_layout()
-        # plt.show()
-        fig.savefig("img_" + str(img) + "_layer" + str(layerIndex) + "_" + layer.__class__.__name__ + ".png")
-        # plt.close(fig)
-    else:
-        print("Can't dump data of this layer{}- {}".format(layerIndex, layer.__class__.__name__))
 
 
