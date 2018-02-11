@@ -28,5 +28,6 @@
 # Hint
 - How to work with mail by python. READ ->> (https://www.youtube.com/watch?v=mP_Ln-Z9-XY)
 - How to  integrate Firebase. READ ->> (https://blog.devcolor.org/heating-up-with-firebase-tutorial-on-how-to-integrate-firebase-into-your-app-6ce97440175d)
+- Pretrainning Weight File. Download Here ->> (https://drive.google.com/open?id=1ASRVhVWwpLyPVXESnrxUYwo6-HgGDySS) 
 
 ##Thank "asingh33" for sharing your project.
