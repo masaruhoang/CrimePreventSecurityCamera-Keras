@@ -1,4 +1,4 @@
-# CrimeP revent Security Camera - Keras
+# Crime Prevent Security Camera - Keras
 ###### Crime Prevention by using simulatial Security Camera
 ###### OpenCV, Using Keras (CNN)
 ###### Python
