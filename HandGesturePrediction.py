@@ -12,14 +12,12 @@ y0 = 200
 height = 200
 width = 200
 
-lastgesture = -1
-
 # Counter which count Image is saved to data_set directory
-counter = 0
+cnt = 0
 
 # This parameter controls number of image samples to be taken PER gesture
 numOfSamples = 301
-gestname = ""
+im_file_name = ""
 path = "./data_set/"
 mod = 0
 
@@ -36,28 +34,28 @@ min_predict_val = 70
 
 '''=========================== SAVE ROI IMAGE ======================='''
 '''=================================================================='''
-def saveROIImg(img):
-    global counter, gestname, path, im_save_state
-    if counter > (numOfSamples - 1):
+def save_roi_img(img):
+    global cnt, im_file_name, path, im_save_state
+    if cnt > (numOfSamples - 1):
         # Reset the parameters
         im_save_state = False
-        gestname = ''
-        counter = 0
+        im_file_name = ''
+        cnt = 0
         chk_next_class = input("Do you want save the next class(y/n): ")
         if chk_next_class == 'y':
             im_save_state = True
-            gestname = input("Type name for next class: ")
+            im_file_name = input("Type name for next class: ")
         return
-    counter = counter + 1
-    name = gestname + str(counter)
+    cnt = cnt + 1
+    name = im_file_name + str(cnt)
     print("Saving img:", name)
     cv2.imwrite(path + name + ".png", img)
     time.sleep(0.04)
 
 '''================= CROP AND CONVERT TO GRAYSCALE ==================='''
 '''==================================================================='''
-def binaryMask(frame, x0, y0, width, height, pyrebase):
-    global check_state_prediction, check_training_mode, mod, lastgesture, im_save_state, has_violence_weapon, has_money
+def bin_scale_im(frame, x0, y0, width, height, pyrebase):
+    global check_state_prediction, check_training_mode, mod, im_save_state, has_violence_weapon, has_money
 
     cv2.rectangle(frame, (x0, y0), (x0 + width, y0 + height), (0, 0, 0), 2)
     roi = frame[y0:y0 + height, x0:x0 + width]
@@ -69,7 +67,7 @@ def binaryMask(frame, x0, y0, width, height, pyrebase):
     ret, res = cv2.threshold(th3, min_predict_val, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
     if im_save_state == True:
-        saveROIImg(res)
+        save_roi_img(res)
     elif check_state_prediction == True:
         predicted_label = my_cnn.predict(mod, res)
         cv2.putText(frame, "["+str(predicted_label)+"]", (x0+50, y0-10), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 1, 1)
@@ -97,9 +95,9 @@ def binaryMask(frame, x0, y0, width, height, pyrebase):
 '''========================================================================================'''
 '''====================================== MAIN ============================================'''
 '''========================================================================================'''
-def Main():
+def main():
     global check_state_prediction, check_training_mode, mod, binaryMode, \
-           x0, y0, width, height, im_save_state, gestname, path
+           x0, y0, width, height, im_save_state, im_file_name, path
 
     #Init Pyrebase
     pyrebase = PyrebaseConfig()
@@ -117,16 +115,16 @@ def Main():
     cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
 
     # set rt size as 640x480
-    ret = cap.set(3, 640)
-    ret = cap.set(4, 480)
+    frame_stt = cap.set(3, 640)
+    frame_stt = cap.set(4, 480)
 
     while (True):
         ret, frame = cap.read()
 
         frame = cv2.flip(frame, 3)
 
-        if ret == True:
-            binaryMask(frame, x0, y0, width, height, pyrebase)
+        if frame_stt == True:
+            bin_scale_im(frame, x0, y0, width, height, pyrebase)
         cv2.line(frame, (370,0), (370,480), (0,0,0), 2)
         cv2.putText(frame, 'Opts-Press key from keyboard', (fx-20, fy), font, 0.5, (0, 0, 0), 1, 1)
         cv2.putText(frame, 't - Training', (fx, fy + fh), font, size, (0, 50, 0), 1, 1)
@@ -149,7 +147,7 @@ def Main():
 
         ## Use c key to start collect image and save to data_set
         if key == ord('c'):
-            gestname = input("Type name of the classes (Ex: PUNCH, KNIFE....): ")
+            im_file_name = input("Type name of the classes (Ex: PUNCH, KNIFE....): ")
             im_save_state = not im_save_state
 
         ## Use t key to start training mode
@@ -169,5 +167,5 @@ def Main():
 
 
 if __name__ == "__main__":
-    Main()
+    main()
 
